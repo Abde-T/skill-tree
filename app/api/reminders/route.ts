@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scheduleReminder, removeReminder, listReminders, startReminderWorker } from '@/lib/reminders/queue';
+import { isRedisConnected } from '@/lib/redis/connection';
 
 // Start the worker on first API hit (dev convenience)
 let workerStarted = false;
@@ -19,6 +20,14 @@ function ensureWorker() {
 
 export async function GET() {
   try {
+    const redisConnected = await isRedisConnected();
+    if (!redisConnected) {
+      return NextResponse.json(
+        { error: 'Redis is not connected. Reminders require Redis to be running.' },
+        { status: 503 },
+      );
+    }
+
     ensureWorker();
     const reminders = await listReminders();
     return NextResponse.json({ reminders });
@@ -35,6 +44,14 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const redisConnected = await isRedisConnected();
+    if (!redisConnected) {
+      return NextResponse.json(
+        { error: 'Redis is not connected. Reminders require Redis to be running. Please start Redis and try again.' },
+        { status: 503 },
+      );
+    }
+
     ensureWorker();
     const body = await request.json();
     const { skillId, skillName, frequency, preferredTime } = body;

@@ -1,4 +1,4 @@
-import { Branch, Skill, SkillTreeState, AppSettings } from '@/types';
+import { Branch, Skill, SkillTreeState, AppSettings, Todo } from '@/types';
 
 // ─── Branches ────────────────────────────────────────────────────────────────
 
@@ -34,6 +34,14 @@ export const BRANCHES: Branch[] = [
     glowColor: '#34d399', // emerald-400
     icon: '🛡️',
     skillIds: ['discipline', 'consistency'],
+  },
+  {
+    id: 'rogue',
+    name: 'Rogue',
+    color: '#ef4444',    // red-500
+    glowColor: '#f87171', // red-400
+    icon: '🗡️',
+    skillIds: [], // Todos will be added dynamically
   },
 ];
 
@@ -169,6 +177,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 export const INITIAL_STATE: SkillTreeState = {
   branches: BRANCHES,
   skills: INITIAL_SKILLS,
+  todos: {},
   sessions: [],
   settings: DEFAULT_SETTINGS,
 };

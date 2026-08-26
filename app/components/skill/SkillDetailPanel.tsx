@@ -19,16 +19,53 @@ export default function SkillDetailPanel({ skill, branch, onClose, onPractice }:
   const [showReminderEditor, setShowReminderEditor] = useState(false);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>('default');
   const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [hasReminder, setHasReminder] = useState(false);
+  const [reminderInfo, setReminderInfo] = useState<{ frequency: string; preferredTime: string } | null>(null);
 
   const xpInLevel = skill.xp % 100;
   const isPracticedToday = skill.lastPracticedDate === new Date().toISOString().split('T')[0];
 
-  // Check notification permission on mount
+  // Check if reminder exists for this skill
+  const checkReminder = useCallback(async () => {
+    try {
+      console.log('[Reminder] Checking for reminder, skillId:', skill.id);
+      const res = await fetch('/api/reminders');
+      if (res.ok) {
+        const data = await res.json();
+        console.log('[Reminder] API response:', data);
+        const skillReminder = data.reminders?.find((r: any) => r.skillId === skill.id);
+        console.log('[Reminder] Found reminder for skill:', skillReminder);
+        if (skillReminder) {
+          setHasReminder(true);
+          setReminderInfo({
+            frequency: skillReminder.frequency,
+            preferredTime: skillReminder.preferredTime,
+          });
+        } else {
+          setHasReminder(false);
+          setReminderInfo(null);
+        }
+      } else {
+        console.error('[Reminder] API request failed:', res.status);
+      }
+    } catch (err) {
+      console.error('Failed to check reminder:', err);
+    }
+  }, [skill.id]);
+
+  // Check notification permission and existing reminder on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {
       setNotifPermission(Notification.permission);
     }
-  }, []);
+
+    checkReminder();
+  }, [checkReminder]);
+
+  const handleReminderSaved = useCallback(() => {
+    // Refresh reminder state after save
+    checkReminder();
+  }, [checkReminder]);
 
   const handlePractice = useCallback(() => {
     if (isPracticing) return;
@@ -257,18 +294,50 @@ export default function SkillDetailPanel({ skill, branch, onClose, onPractice }:
               Reminders & Notifications
             </span>
 
-            {/* Set Reminder button */}
-            <button
-              onClick={() => setShowReminderEditor(true)}
-              className="w-full py-3 rounded-xl font-semibold text-sm border transition-all duration-200 flex items-center justify-center gap-2"
-              style={{
-                borderColor: `color-mix(in srgb, ${branch.color} 30%, transparent)`,
-                color: branch.color,
-                background: `color-mix(in srgb, ${branch.color} 5%, transparent)`,
-              }}
-            >
-              ⏰ Set Reminder
-            </button>
+            {/* Current reminder info or Set Reminder button */}
+            {hasReminder && reminderInfo ? (
+              <div className="surface-elevated rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-[var(--text-primary)]">
+                    ⏰ Reminder Active
+                  </span>
+                  <span className="text-[10px] text-emerald-400">Enabled</span>
+                </div>
+                <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)]">
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] block">Frequency</span>
+                    <span className="font-medium text-[var(--text-primary)]">{reminderInfo.frequency}</span>
+                  </div>
+                  <div className="w-px h-8 bg-[var(--border-subtle)]" />
+                  <div>
+                    <span className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] block">Time</span>
+                    <span className="font-medium font-mono text-[var(--text-primary)]">{reminderInfo.preferredTime}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowReminderEditor(true)}
+                className="w-full py-3 rounded-xl font-semibold text-sm border transition-all duration-200 flex items-center justify-center gap-2"
+                style={{
+                  borderColor: `color-mix(in srgb, ${branch.color} 30%, transparent)`,
+                  color: branch.color,
+                  background: `color-mix(in srgb, ${branch.color} 5%, transparent)`,
+                }}
+              >
+                ⏰ Set Reminder
+              </button>
+            )}
+
+            {/* Re-schedule button (only shown if reminder exists) */}
+            {hasReminder && (
+              <button
+                onClick={() => setShowReminderEditor(true)}
+                className="w-full py-3 rounded-xl font-semibold text-sm border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-medium)] transition-all duration-200 flex items-center justify-center gap-2"
+              >
+                🔄 Re-schedule
+              </button>
+            )}
 
             {/* Notification permission */}
             {notifPermission !== 'granted' ? (
@@ -313,6 +382,7 @@ export default function SkillDetailPanel({ skill, branch, onClose, onPractice }:
           skill={skill}
           branch={branch}
           onClose={() => setShowReminderEditor(false)}
+          onSaved={handleReminderSaved}
         />
       )}
     </>

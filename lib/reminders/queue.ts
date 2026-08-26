@@ -11,6 +11,41 @@ export interface ReminderJobData {
   preferredTime: string;  // 'HH:mm'
 }
 
+export interface ReminderMetadata {
+  skillId: string;
+  skillName: string;
+  frequency: string;
+  preferredTime: string;
+}
+
+// ─── Metadata Storage (Redis) ────────────────────────────────────────────────
+
+const REMINDERS_METADATA_KEY = 'reminders:metadata';
+
+async function saveReminderMetadata(data: ReminderJobData): Promise<void> {
+  const redis = getRedis();
+  const metadata: ReminderMetadata = {
+    skillId: data.skillId,
+    skillName: data.skillName,
+    frequency: data.frequency,
+    preferredTime: data.preferredTime,
+  };
+  await redis.hset(REMINDERS_METADATA_KEY, data.skillId, JSON.stringify(metadata));
+  console.log(`[Reminder] Saved metadata for skill: ${data.skillId}`);
+}
+
+async function removeReminderMetadata(skillId: string): Promise<void> {
+  const redis = getRedis();
+  await redis.hdel(REMINDERS_METADATA_KEY, skillId);
+  console.log(`[Reminder] Removed metadata for skill: ${skillId}`);
+}
+
+async function getAllReminderMetadata(): Promise<ReminderMetadata[]> {
+  const redis = getRedis();
+  const all = await redis.hgetall(REMINDERS_METADATA_KEY);
+  return Object.values(all).map((s) => JSON.parse(s));
+}
+
 // ─── Queue ───────────────────────────────────────────────────────────────────
 
 const QUEUE_NAME = 'reminder-queue';
@@ -75,6 +110,9 @@ export async function scheduleReminder(data: ReminderJobData): Promise<string> {
     { name: schedulerId, data },
   );
 
+  // Save metadata
+  await saveReminderMetadata(data);
+
   console.log(`[Reminder] Scheduled "${data.skillName}" with cron: ${cron}`);
   return schedulerId;
 }
@@ -89,17 +127,13 @@ export async function removeReminder(skillId: string): Promise<void> {
   } catch {
     // Scheduler might not exist yet, that's fine
   }
+
+  // Remove metadata
+  await removeReminderMetadata(skillId);
 }
 
-export async function listReminders(): Promise<Array<{ skillId: string; cron: string; schedulerId: string }>> {
-  const queue = getReminderQueue();
-  const schedulers = await queue.getJobSchedulers();
-
-  return schedulers.map((scheduler) => ({
-    skillId: (scheduler.id ?? '').replace('reminder-', ''),
-    cron: scheduler.pattern || '',
-    schedulerId: scheduler.id ?? '',
-  }));
+export async function listReminders(): Promise<ReminderMetadata[]> {
+  return getAllReminderMetadata();
 }
 
 // ─── Worker ──────────────────────────────────────────────────────────────────

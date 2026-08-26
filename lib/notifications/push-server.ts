@@ -31,6 +31,7 @@ export async function removeSubscription(endpoint: string): Promise<void> {
 export async function getAllSubscriptions(): Promise<webPush.PushSubscription[]> {
   const redis = getRedis();
   const all = await redis.hgetall(SUBSCRIPTIONS_KEY);
+  console.log(`[Push] Retrieved ${Object.keys(all).length} subscriptions from Redis`);
   return Object.values(all).map((s) => JSON.parse(s));
 }
 

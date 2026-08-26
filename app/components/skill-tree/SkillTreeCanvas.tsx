@@ -6,22 +6,28 @@ import CharacterNode from './CharacterNode';
 import SkillNode from './SkillNode';
 import ConnectionLines from './ConnectionLines';
 import SkillDetailPanel from '@/app/components/skill/SkillDetailPanel';
+import TodoNode from '@/app/components/todo/TodoNode';
+import TodoEditor from '@/app/components/todo/TodoEditor';
 import { TREE_LAYOUT } from '@/lib/layout/tree-layout';
 
 interface SkillTreeCanvasProps {
   state: SkillTreeState;
   onPractice: (skillId: string) => void;
+  onAddTodo?: (title: string, description: string) => void;
+  onDeleteTodo?: (todoId: string) => void;
+  onToggleTodo?: (todoId: string) => void;
 }
 
-export default function SkillTreeCanvas({ state, onPractice }: SkillTreeCanvasProps) {
+export default function SkillTreeCanvas({ state, onPractice, onAddTodo, onDeleteTodo, onToggleTodo }: SkillTreeCanvasProps) {
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
+  const [showTodoEditor, setShowTodoEditor] = useState(false);
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: -200 }); // Start scrolled down a bit for mobile first
   const [isDragging, setIsDragging] = useState(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  const { branches, skills } = state;
+  const { branches, skills, todos } = state;
 
   // Aggregate character level
   const allSkills = Object.values(skills);
@@ -35,6 +41,21 @@ export default function SkillTreeCanvas({ state, onPractice }: SkillTreeCanvasPr
   const handleCloseDetail = useCallback(() => {
     setSelectedSkillId(null);
   }, []);
+
+  const handleAddTodo = useCallback((title: string, description: string) => {
+    onAddTodo?.(title, description);
+  }, [onAddTodo]);
+
+  const handleDeleteTodo = useCallback((todoId: string) => {
+    onDeleteTodo?.(todoId);
+  }, [onDeleteTodo]);
+
+  const handleToggleTodo = useCallback((todoId: string) => {
+    onToggleTodo?.(todoId);
+  }, [onToggleTodo]);
+
+  // Get Rogue branch
+  const rogueBranch = branches.find((b) => b.id === 'rogue');
 
   // Pan handlers
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -140,6 +161,60 @@ export default function SkillTreeCanvas({ state, onPractice }: SkillTreeCanvasPr
             </div>
           );
         })}
+
+        {/* Todo nodes for Rogue branch */}
+        {rogueBranch && rogueBranch.skillIds.map((todoId, index) => {
+          const todo = todos[todoId];
+          if (!todo) return null;
+
+          // Position todos in a vertical line on the far right to avoid overlap
+          // Communication branch is at x: 85-90, so we position Rogue at x: 95
+          const xPos = 95;
+          const yPos = 20 + (index * 12);
+
+          return (
+            <div
+              key={todoId}
+              className="absolute"
+              style={{
+                left: `${xPos}%`,
+                bottom: `${yPos}%`,
+                transform: 'translate(-50%, 50%)',
+              }}
+            >
+              <TodoNode
+                todo={todo}
+                branch={rogueBranch}
+                onClick={() => {}}
+                onToggle={() => handleToggleTodo(todoId)}
+                onDelete={() => handleDeleteTodo(todoId)}
+              />
+            </div>
+          );
+        })}
+
+        {/* Add Todo button for Rogue branch */}
+        {rogueBranch && (
+          <div
+            className="absolute cursor-pointer"
+            style={{
+              left: '95%',
+              bottom: '8%',
+              transform: 'translate(-50%, 50%)',
+            }}
+            onClick={() => setShowTodoEditor(true)}
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center border-2 border-dashed transition-all duration-200 hover:border-solid"
+              style={{
+                borderColor: rogueBranch.color,
+                color: rogueBranch.color,
+              }}
+            >
+              <span className="text-xl">+</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Zoom controls */}
@@ -184,6 +259,15 @@ export default function SkillTreeCanvas({ state, onPractice }: SkillTreeCanvasPr
           branch={selectedBranch}
           onClose={handleCloseDetail}
           onPractice={onPractice}
+        />
+      )}
+
+      {/* Todo Editor modal */}
+      {showTodoEditor && rogueBranch && (
+        <TodoEditor
+          branch={rogueBranch}
+          onClose={() => setShowTodoEditor(false)}
+          onAddTodo={handleAddTodo}
         />
       )}
     </div>

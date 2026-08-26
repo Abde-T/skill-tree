@@ -1,66 +1,48 @@
 'use client';
 
 import React, { useState } from 'react';
-import type { Skill, Branch } from '@/types';
+import type { Branch } from '@/types';
 
-interface ReminderEditorProps {
-  skill: Skill;
+interface TodoEditorProps {
   branch: Branch;
   onClose: () => void;
-  onSaved?: () => void;
+  onAddTodo: (title: string, description: string, reminder?: { frequency: string; preferredTime: string }) => void;
 }
 
-export default function ReminderEditor({ skill, branch, onClose, onSaved }: ReminderEditorProps) {
-  const [frequency, setFrequency] = useState(skill.frequency || 'daily');
-  const [preferredTime, setPreferredTime] = useState(
-    skill.reminder?.preferredTime || '18:00'
-  );
-  const [enabled, setEnabled] = useState(skill.reminder?.enabled ?? true);
+export default function TodoEditor({ branch, onClose, onAddTodo }: TodoEditorProps) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [frequency, setFrequency] = useState('daily');
+  const [preferredTime, setPreferredTime] = useState('18:00');
+  const [enableReminder, setEnableReminder] = useState(false);
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSave = async () => {
+    if (!title.trim()) {
+      setStatus('error');
+      setErrorMsg('Title is required');
+      return;
+    }
+
     setStatus('saving');
     setErrorMsg('');
-
+    
+    const reminder = enableReminder ? { frequency, preferredTime } : undefined;
+    
     try {
-      if (enabled) {
-        const res = await fetch('/api/reminders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            skillId: skill.id,
-            skillName: skill.name,
-            frequency,
-            preferredTime,
-          }),
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Failed to save reminder');
-        }
-      } else {
-        const res = await fetch(`/api/reminders?skillId=${skill.id}`, {
-          method: 'DELETE',
-        });
-
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Failed to remove reminder');
-        }
-      }
-
+      onAddTodo(title.trim(), description.trim(), reminder);
       setStatus('saved');
-      onSaved?.();
-      setTimeout(() => onClose(), 1000);
+      setTimeout(() => {
+        onClose();
+      }, 500);
     } catch (err: unknown) {
       setStatus('error');
-      setErrorMsg(err instanceof Error ? err.message : 'Unknown error');
+      setErrorMsg(err instanceof Error ? err.message : 'Failed to add todo');
     }
   };
 
-  const frequencyOptions: Array<{ value: typeof frequency; label: string }> = [
+  const frequencyOptions: Array<{ value: string; label: string }> = [
     { value: 'daily', label: 'Daily' },
     { value: '3x/week', label: '3× per week' },
     { value: '2x/week', label: '2× per week' },
@@ -81,11 +63,11 @@ export default function ReminderEditor({ skill, branch, onClose, onSaved }: Remi
         <div className="flex items-center justify-between mb-6">
           <div>
             <h3 className="text-base font-bold text-[var(--text-primary)]">
-              Set Reminder
+              Add Todo
             </h3>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
               <span style={{ color: branch.color }}>{branch.icon}</span>{' '}
-              {skill.name}
+              {branch.name}
             </p>
           </div>
           <button
@@ -96,29 +78,58 @@ export default function ReminderEditor({ skill, branch, onClose, onSaved }: Remi
           </button>
         </div>
 
-        {/* Enable toggle */}
-        <div className="flex items-center justify-between py-3 border-b border-[var(--border-subtle)]">
+        {/* Title input */}
+        <div className="mb-4">
+          <label className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] block mb-2">
+            Title
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="What needs to be done?"
+            className="w-full px-4 py-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+
+        {/* Description input */}
+        <div className="mb-4">
+          <label className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] block mb-2">
+            Description (optional)
+          </label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Add more details..."
+            rows={3}
+            className="w-full px-4 py-3 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+          />
+        </div>
+
+        {/* Reminder toggle */}
+        <div className="flex items-center justify-between py-3 border-b border-[var(--border-subtle)] mb-4">
           <span className="text-sm font-medium text-[var(--text-primary)]">
-            Reminder enabled
+            Set Reminder
           </span>
           <button
-            onClick={() => setEnabled(!enabled)}
+            onClick={() => setEnableReminder(!enableReminder)}
             className={`w-11 h-6 rounded-full transition-colors duration-200 relative ${
-              enabled ? 'bg-indigo-500' : 'bg-[var(--bg-hover)]'
+              enableReminder ? 'bg-indigo-500' : 'bg-[var(--bg-hover)]'
             }`}
           >
             <div
               className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                enabled ? 'translate-x-[22px]' : 'translate-x-0.5'
+                enableReminder ? 'translate-x-[22px]' : 'translate-x-0.5'
               }`}
             />
           </button>
         </div>
 
-        {enabled && (
+        {/* Reminder options */}
+        {enableReminder && (
           <>
             {/* Frequency */}
-            <div className="mt-4">
+            <div className="mb-4">
               <label className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] block mb-2">
                 Frequency
               </label>
@@ -140,7 +151,7 @@ export default function ReminderEditor({ skill, branch, onClose, onSaved }: Remi
             </div>
 
             {/* Time picker */}
-            <div className="mt-4">
+            <div className="mb-4">
               <label className="text-[10px] uppercase tracking-wider text-[var(--text-muted)] block mb-2">
                 Preferred Time
               </label>
@@ -155,8 +166,8 @@ export default function ReminderEditor({ skill, branch, onClose, onSaved }: Remi
         )}
 
         {/* Error message */}
-        {status === 'error' && (
-          <div className="mt-4 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs">
+        {status === 'error' && errorMsg && (
+          <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
             {errorMsg}
           </div>
         )}
@@ -164,17 +175,17 @@ export default function ReminderEditor({ skill, branch, onClose, onSaved }: Remi
         {/* Save button */}
         <button
           onClick={handleSave}
-          disabled={status === 'saving'}
-          className="w-full mt-6 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 disabled:opacity-50"
+          disabled={status === 'saving' || !title.trim()}
+          className="w-full py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 disabled:opacity-50"
           style={{
             background: status === 'saved'
               ? '#10b981'
               : `linear-gradient(135deg, ${branch.color}, ${branch.glowColor})`,
           }}
         >
-          {status === 'saving' ? 'Saving...' :
-           status === 'saved' ? '✓ Saved!' :
-           enabled ? 'Save Reminder' : 'Disable Reminder'}
+          {status === 'saving' ? 'Adding...' :
+           status === 'saved' ? '✓ Added!' :
+           'Add Todo'}
         </button>
       </div>
     </div>

@@ -26,6 +26,20 @@ export interface PracticeSession {
   xpGained: number;
 }
 
+// ─── Todo ─────────────────────────────────────────────────────────────────────
+
+export interface Todo {
+  id: string;
+  title: string;
+  description: string;
+  branchId: string;
+  completed: boolean;
+  completedAt: string | null;
+  dueDate: string | null; // ISO 8601 date string or null
+  reminder: ReminderConfig | null;
+  createdAt: string; // ISO 8601
+}
+
 // ─── Skill ───────────────────────────────────────────────────────────────────
 
 export interface Skill {
@@ -70,6 +84,7 @@ export interface AppSettings {
 export interface SkillTreeState {
   branches: Branch[];
   skills: Record<string, Skill>;
+  todos: Record<string, Todo>;
   sessions: PracticeSession[];
   settings: AppSettings;
 }

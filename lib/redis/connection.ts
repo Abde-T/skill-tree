@@ -4,8 +4,8 @@ let redis: Redis | null = null;
 
 export function getRedis(): Redis {
   if (!redis) {
-    const url = process.env.REDIS_URL || 'redis://localhost:6379';
-    redis = new Redis(url, {
+    const url = process.env.NODE_ENV === 'production' ? process.env.REDIS_URL : 'redis://localhost:6379';
+    redis = new Redis(url as string, {
       maxRetriesPerRequest: null, // Required by BullMQ
       enableReadyCheck: false,
       retryStrategy(times: number) {
@@ -27,6 +27,16 @@ export function getRedis(): Redis {
   }
 
   return redis;
+}
+
+export async function isRedisConnected(): Promise<boolean> {
+  try {
+    const client = getRedis();
+    await client.ping();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function closeRedis(): Promise<void> {
