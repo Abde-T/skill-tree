@@ -1,26 +1,501 @@
 @import "tailwindcss";
 
+/* ─── Design Tokens ───────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background layers */
+  --bg-deep: #07080c;
+  --bg-base: #0c0e14;
+  --bg-surface: #12151e;
+  --bg-elevated: #1a1e2e;
+  --bg-hover: #222840;
+
+  /* Text */
+  --text-primary: #e8eaf0;
+  --text-secondary: #8b90a0;
+  --text-muted: #555a6e;
+
+  /* Branch accent colors */
+  --color-engineering: #3b82f6;
+  --color-engineering-glow: #60a5fa;
+  --color-thinking: #a855f7;
+  --color-thinking-glow: #c084fc;
+  --color-communication: #f59e0b;
+  --color-communication-glow: #fbbf24;
+  --color-character: #10b981;
+  --color-character-glow: #34d399;
+
+  /* XP bar */
+  --xp-bar-bg: #1a1e2e;
+  --xp-bar-fill-start: #6366f1;
+  --xp-bar-fill-end: #8b5cf6;
+  --xp-bar-glow: rgba(99, 102, 241, 0.4);
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-medium: rgba(255, 255, 255, 0.1);
+
+  /* Node sizing */
+  --node-size: 100px;
+  --node-size-sm: 80px;
+  --character-node-size: 120px;
+
+  /* Shadows */
+  --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.15);
+
+  /* Font — uses Next.js font CSS variables from layout.tsx */
+  --font-sans: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains), monospace;
+
+  /* Transitions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg-base);
+  --color-foreground: var(--text-primary);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ─── Base Styles ─────────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg-deep);
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes streak-fire {
+  0%, 100% { transform: scale(1) translateY(0); }
+  25% { transform: scale(1.1) translateY(-2px); }
+  50% { transform: scale(1.05) translateY(-1px); }
+  75% { transform: scale(1.15) translateY(-3px); }
+}
+
+@keyframes xp-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(var(--fill-pct, 0)); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-out-right {
+  from { opacity: 1; transform: translateX(0); }
+  to { opacity: 0; transform: translateX(100%); }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes xp-burst {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-40px) scale(1.5); }
+}
+
+@keyframes level-up-flash {
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(2); }
+}
+
+@keyframes dash-flow {
+  to { stroke-dashoffset: -20; }
+}
+
+@keyframes node-connection-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* ─── Utility Classes ─────────────────────────────────────────────────────── */
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.animate-streak-fire {
+  animation: streak-fire 1.5s ease-in-out infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s var(--ease-out-expo) forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s var(--ease-out-expo) forwards;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.4s var(--ease-out-expo) forwards;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.4s var(--ease-spring) forwards;
+}
+
+.animate-xp-burst {
+  animation: xp-burst 0.8s var(--ease-out-expo) forwards;
+}
+
+.animate-dash-flow {
+  animation: dash-flow 1.5s linear infinite;
+}
+
+/* ─── Glass / Surface Styles ──────────────────────────────────────────────── */
+
+.surface-glass {
+  background: rgba(18, 21, 30, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+}
+
+.surface-elevated {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+}
+
+/* ─── XP Bar ──────────────────────────────────────────────────────────────── */
+
+.xp-bar {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: var(--xp-bar-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.xp-bar-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--fill-start, var(--xp-bar-fill-start)), var(--fill-end, var(--xp-bar-fill-end)));
+  transform-origin: left;
+  transition: width 0.6s var(--ease-out-expo);
+}
+
+.xp-bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+  border-radius: 0 4px 4px 0;
+}
+
+.xp-bar-glow {
+  position: absolute;
+  left: 0;
+  top: -2px;
+  height: calc(100% + 4px);
+  border-radius: 6px;
+  background: linear-gradient(90deg, var(--fill-start, var(--xp-bar-fill-start)), var(--fill-end, var(--xp-bar-fill-end)));
+  opacity: 0.3;
+  filter: blur(6px);
+  transition: width 0.6s var(--ease-out-expo);
+}
+
+/* ─── Skill Node ──────────────────────────────────────────────────────────── */
+
+.skill-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.3s var(--ease-spring);
+}
+
+.skill-node:hover {
+  transform: translateY(-4px);
+}
+
+.skill-node-ring {
+  position: relative;
+  width: var(--node-size);
+  height: var(--node-size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-surface);
+  border: 2px solid var(--border-medium);
+  transition: all 0.3s var(--ease-out-expo);
+}
+
+.skill-node:hover .skill-node-ring {
+  border-color: var(--node-color, var(--color-engineering));
+  box-shadow: 0 0 20px color-mix(in srgb, var(--node-color, var(--color-engineering)) 30%, transparent),
+              0 0 40px color-mix(in srgb, var(--node-color, var(--color-engineering)) 15%, transparent);
+}
+
+.skill-node-ring .node-glow {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--node-color, var(--color-engineering)) 15%, transparent), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.skill-node:hover .node-glow {
+  opacity: 1;
+}
+
+/* XP ring around the node */
+.xp-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+}
+
+/* ─── Character Node ──────────────────────────────────────────────────────── */
+
+.character-node {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.character-node-ring {
+  position: relative;
+  width: var(--character-node-size);
+  height: var(--character-node-size);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--bg-surface), var(--bg-elevated));
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.15),
+              0 0 60px rgba(99, 102, 241, 0.08);
+}
+
+.character-node-ring .pulse-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+/* ─── Connection Lines (SVG) ──────────────────────────────────────────────── */
+
+.connection-line {
+  stroke: var(--border-medium);
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+}
+
+.connection-line-active {
+  stroke: var(--line-color, var(--color-engineering));
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.5;
+}
+
+.connection-line-dashed {
+  stroke-dasharray: 8 6;
+  animation: dash-flow 1.5s linear infinite;
+}
+
+/* ─── Skill Detail Panel ──────────────────────────────────────────────────── */
+
+.detail-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  max-width: 100vw;
+  height: 100vh;
+  z-index: 50;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 640px) {
+  .detail-panel {
+    width: 100vw;
+    bottom: 0;
+    top: auto;
+    height: 85vh;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+/* ─── Practice Button ─────────────────────────────────────────────────────── */
+
+.practice-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border: none;
+  color: white;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.2s var(--ease-out-expo);
+  overflow: hidden;
+}
+
+.practice-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(99, 102, 241, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.practice-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3);
+}
+
+.practice-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.practice-btn:hover::before {
+  opacity: 1;
+}
+
+/* ─── Priority Badge ──────────────────────────────────────────────────────── */
+
+.priority-s { color: #f59e0b; }
+.priority-a { color: #3b82f6; }
+.priority-b { color: #10b981; }
+.priority-c { color: var(--text-secondary); }
+
+/* ─── Backdrop ────────────────────────────────────────────────────────────── */
+
+.backdrop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+}
+
+/* ─── Tree Canvas ─────────────────────────────────────────────────────────── */
+
+.tree-canvas {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tree-inner {
+  position: relative;
+  transform-origin: center center;
+  transition: transform 0.3s var(--ease-out-expo);
+  touch-action: none;
+}
+
+/* ─── Background Pattern ──────────────────────────────────────────────────── */
+
+.bg-grid {
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.03) 1px, transparent 0);
+  background-size: 40px 40px;
+}
+
+.bg-radial-vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, var(--bg-deep) 100%);
 }
